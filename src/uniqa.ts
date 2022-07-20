@@ -7,15 +7,21 @@ export default function uniqa<T>(asyncFn: AsyncFn<T>) {
   let future: Promise<T> | null = null;
 
   return (...args: unknown[]) => new Promise((resolve) => {
-    waiting.push(resolve);
-
-    if (!future) {
-      future = asyncFn(...args);
-
-      future.then((res) => {
-        waiting.forEach((resFn) => resFn(res));
-        future = null;
+    if (future) {
+      return future.then((res) => {
+        resolve(res);
+        return res;
       });
     }
+
+    waiting.push(resolve);
+
+    future = asyncFn(...args);
+    future.then((res) => {
+      waiting.forEach((resFn) => resFn(res));
+      waiting = [];
+
+      return res;
+    });
   });
 }
